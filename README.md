@@ -1,13 +1,51 @@
 # cursor-laptop-skills
 
-User-invoked Cursor skills that live on the laptop as `~/.claude/skills` + `~/.cursor/commands`. Cloud Agents never get that home directory, so this plugin is the copy they can actually `Read`.
+Slash commands for **every** Cursor Cloud Agent, on **every** repo, after one account install.
+
+Laptop `~/.cursor/commands` and `~/.claude/skills` never copy onto Cloud VMs. Cloud `/` indexes:
+
+1. Built-ins
+2. **This repo's** `.cursor/commands` + `.cursor/skills` (this repo only)
+3. **Account plugins** (all repos)
+
+This plugin is (3). Do not vendor copies into product repos.
+
+## Slash commands
 
 | Slash | When |
 |---|---|
+| `/kg` (`/keep-going`) | Keep going. Audit open work, pick the highest-leverage task, implement it, verify. Do not pause for routine confirmation. |
+| `/fybr` | Follow your best recommendation. Pick one course and execute. Do not interview. |
+| `/get-ready` | Session start, **read-only**. Engram standing decisions + recent `handoffs/`. Never write a handoff. |
+| `/wrap-up` | Session end. Lean handoff in **this** project's `handoffs/`. Does not auto-ship. |
 | `/understand-and-refactor` | First session on an unfamiliar product repo. Map, then highest-ROI refactors. `--report-only` maps only. |
 | `/performance-optimize` | Slowness, memory, extra rendering. Measurable target required. `--report-only` baselines only. |
 | `/clean-architecture-rebuild` | Same behavior; new seams / folders / decoupling. `--report-only` proposes the folder plan. |
 
-Install on the Cursor account (Customize → Plugins, or Team Marketplace import of this repo) so **every** Cloud Agent gets them — not only the sharp-oracle environment snapshot.
+Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules.
 
-Do not also copy these into each product repo. Laptop remains canon; update this plugin when the laptop skills change.
+## Install (required once, on the Cursor account)
+
+Until this is installed on the **account**, Cloud `/` will not list these commands.
+
+1. Cursor desktop → **Customize → Plugins**
+2. Add GitHub repo: `https://github.com/nhouseholder/cursor-laptop-skills`
+3. Enable it for Cloud Agents (account or team), not only this workspace
+4. Start a **new** Cloud session — the current one will not retroactively grow its `/` menu
+
+Team Marketplace import of this private repo works the same if you share it with the team.
+
+A sharp-oracle environment snapshot is **not** a substitute. Snapshots follow that environment; they do not follow diamondpredictions / mmalogic / other repos.
+
+## Update
+
+Laptop remains canon when a skill file exists there. After a laptop edit: copy into `skills/<name>/SKILL.md` here, bump `version` in `plugin.json` and `.cursor-plugin/plugin.json`, push `main`. Cloud sessions pick up the new commit on next start.
+
+## Layout
+
+```
+commands/     # what Cloud `/` indexes (name + description frontmatter)
+skills/       # the protocol each command reads
+.cursor-plugin/plugin.json
+plugin.json   # Agent Plugins manifest (skills + commands)
+```

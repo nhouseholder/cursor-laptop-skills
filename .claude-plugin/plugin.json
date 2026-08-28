@@ -1,0 +1,12 @@
+{
+  "name": "cursor-laptop-skills",
+  "description": "Account-wide slash commands: /kg, /fybr, /get-ready, /wrap-up, plus the three laptop refactor skills.",
+  "author": {
+    "name": "Nicholas Householder"
+  },
+  "homepage": "https://github.com/nhouseholder/cursor-laptop-skills",
+  "repository": "https://github.com/nhouseholder/cursor-laptop-skills",
+  "license": "MIT",
+  "commands": "./commands",
+  "skills": "./skills"
+}

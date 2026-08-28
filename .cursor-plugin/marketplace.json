@@ -2,13 +2,13 @@
   "name": "cursor-laptop-skills",
   "owner": { "name": "Nicholas Householder" },
   "metadata": {
-    "description": "Laptop-canon Cursor skills for Cloud Agents"
+    "description": "Account-wide Cloud slash commands from the laptop harness"
   },
   "plugins": [
     {
       "name": "cursor-laptop-skills",
       "source": "./",
-      "description": "understand-and-refactor, performance-optimize, clean-architecture-rebuild"
+      "description": "/kg /fybr /get-ready /wrap-up /understand-and-refactor /performance-optimize /clean-architecture-rebuild"
     }
   ]
 }
