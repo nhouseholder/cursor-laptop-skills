@@ -1,0 +1,9 @@
+{
+  "name": "cursor-laptop-skills",
+  "displayName": "Laptop skills (Cloud)",
+  "version": "1.0.0",
+  "description": "User-invoked skills from the laptop Cursor account, packaged so Cloud Agents can read them.",
+  "author": { "name": "Nicholas Householder" },
+  "repository": "https://github.com/nhouseholder/cursor-laptop-skills",
+  "license": "MIT"
+}

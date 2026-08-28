@@ -1,0 +1,14 @@
+{
+  "name": "cursor-laptop-skills",
+  "owner": { "name": "Nicholas Householder" },
+  "metadata": {
+    "description": "Laptop-canon Cursor skills for Cloud Agents"
+  },
+  "plugins": [
+    {
+      "name": "cursor-laptop-skills",
+      "source": "./",
+      "description": "understand-and-refactor, performance-optimize, clean-architecture-rebuild"
+    }
+  ]
+}

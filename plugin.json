@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cursor-laptop-skills",
+  "description": "Laptop-canon Cursor skills for Cloud Agents: understand-and-refactor, performance-optimize, clean-architecture-rebuild.",
+  "version": "1.0.0",
+  "author": { "name": "Nicholas Householder" },
+  "license": "MIT",
+  "repository": "https://github.com/nhouseholder/cursor-laptop-skills"
+}
