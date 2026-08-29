@@ -17,12 +17,16 @@ This plugin is (3). Do not vendor copies into product repos.
 | `/kg` (`/keep-going`) | Keep going. Audit open work, pick the highest-leverage task, implement it, verify. Do not pause for routine confirmation. |
 | `/fybr` | Follow your best recommendation. Pick one course and execute. Do not interview. |
 | `/get-ready` | Session start, **read-only**. Engram standing decisions + recent `handoffs/`. Never write a handoff. |
-| `/wrap-up` | Session end. Lean handoff in **this** project's `handoffs/`. Does not auto-ship. |
+| `/wrap-up` | Session end. Lean handoff in **this** project's `handoffs/`. Saves standing memory to the existing **Engram MCP**. Does not auto-ship. |
 | `/understand-and-refactor` | First session on an unfamiliar product repo. Map, then highest-ROI refactors. `--report-only` maps only. |
 | `/performance-optimize` | Slowness, memory, extra rendering. Measurable target required. `--report-only` baselines only. |
 | `/clean-architecture-rebuild` | Same behavior; new seams / folders / decoupling. `--report-only` proposes the folder plan. |
 
-Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules.
+Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules. Exception: `skills/engram-save/SKILL.md` is always-on so Cloud Agents `mem_save` during the session, not only at wrap-up.
+
+## Engram (existing MCP)
+
+Cloud Agents must use the **Engram** Cursor plugin (`engram mcp --tools=agent` → `mem_save` / `mem_search` / `mem_session_summary`). That is the same MCP desktop agents use. The plugin is already installed; Cloud VMs still need the `engram` binary on PATH (diamondpredictions: `scripts/cloud_install_engram.sh`) and Engram Cloud autosync (`ENGRAM_CLOUD_TOKEN`, `ENGRAM_CLOUD_SERVER`, `ENGRAM_CLOUD_AUTOSYNC=1`) so other agents can read the writes.
 
 ## Install (required once, on the Cursor account)
 
