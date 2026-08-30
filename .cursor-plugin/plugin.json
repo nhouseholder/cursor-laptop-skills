@@ -1,12 +1,22 @@
 {
   "name": "cursor-laptop-skills",
   "displayName": "Laptop skills (Cloud)",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Slash commands for every Cloud Agent: /kg, /fybr, /get-ready, /wrap-up, plus understand-and-refactor, performance-optimize, clean-architecture-rebuild. Engram MCP saves are required.",
-  "author": { "name": "Nicholas Householder" },
+  "author": {
+    "name": "Nicholas Householder"
+  },
   "repository": "https://github.com/nhouseholder/cursor-laptop-skills",
   "license": "MIT",
-  "keywords": ["kg", "fybr", "get-ready", "wrap-up", "refactor", "performance", "engram"],
+  "keywords": [
+    "kg",
+    "fybr",
+    "get-ready",
+    "wrap-up",
+    "refactor",
+    "performance",
+    "engram"
+  ],
   "skills": "./skills",
   "commands": "./commands"
 }
