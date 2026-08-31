@@ -25,17 +25,18 @@ This plugin is (3). Do not vendor copies into product repos.
 Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules. Exceptions that **are** always-on:
 
 - `skills/engram-save/SKILL.md` — `mem_save` during the session, not only at wrap-up
-- `skills/tailscale-cloud/SKILL.md` — join the tailnet in userspace and SSH to `nicholass-imac`
+- `skills/tailscale-cloud/SKILL.md` — Tailscale userspace, JobHub on `nicholass-imac`, GitHub extraheader fix, Cloudflare tokens already on Cloud
 
-## Tailscale (every Cloud Agent)
+## Cloud HQ (every Cloud Agent)
 
 Cursor has **no** account-wide `start` script. What actually follows every new Cloud environment on this account:
 
-1. Cursor **User** secret `TAILSCALE_AUTHKEY` (Runtime Secret — not environment-scoped)
-2. This plugin skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`)
+1. Cursor **User** secrets `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`) — not environment-scoped
+2. This plugin skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`). `TS_API_KEY` mints an ephemeral auth key per boot.
 3. Product repos that opt in: `"start": "bash scripts/cloud_tailscale_up.sh"` in `.cursor/environment.json` so the daemon comes up at boot, not after the model reads the skill
 
-iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put the auth key in a repo.
+GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; `bash scripts/cloud_tailscale_up.sh --jobhub …` SSHs to the iMac to run jobs. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
+
 
 ## Engram (existing MCP)
 
