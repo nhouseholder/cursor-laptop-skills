@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Bring up Tailscale userspace networking on a Cursor Cloud VM.
+# Bring up Tailscale userspace networking on a Cursor Cloud VM when a key is
+# already in the environment. The Cloud sibling path that always works is
+# SPORT_REPO_TOKEN + GitHub API (`scripts/cloud_github_git_env.py` and
+# `engine/cloud_github_siblings.py`). Do not instruct Nicholas to mint a
+# Tailscale key or SSH to the iMac.
 #
 # Canon also lives in cursor-laptop-skills/scripts/cloud_tailscale_up.sh
 # (account plugin — every Cloud Agent). Keep the two files identical.
@@ -9,10 +13,11 @@
 # Do not export HTTP_PROXY/HTTPS_PROXY globally — that would send GitHub
 # and Cloudflare through the tailnet and break the job.
 #
-# Auth: User secret TAILSCALE_AUTHKEY (Runtime Secret). Never echo it.
-# Missing key: print a loud skip and exit 0 so `start` does not brick the VM.
+# Auth: TAILSCALE_AUTHKEY if present (never echo it). Missing key: skip the
+# tailnet, bind GitHub, exit 0 so `start` does not brick the VM.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_DIR="${TAILSCALE_STATE_DIR:-${HOME}/.local/share/tailscale}"
 SOCKS_PORT="${TAILSCALE_SOCKS_PORT:-1055}"
 HTTP_PROXY_PORT="${TAILSCALE_HTTP_PROXY_PORT:-1054}"
@@ -26,11 +31,33 @@ MODE="${1:-up}"
 
 log() { printf '[cloud-tailscale] %s\n' "$*" >&2; }
 
-die_no_key() {
-  log "TAILSCALE_AUTHKEY missing — this Cloud VM cannot join the tailnet."
-  log "Add it as a Cursor *User* secret (not environment-scoped) and start a new agent."
-  log "iMac MagicDNS name remains ${IMAC_HOST}."
-  exit 0
+skip_tailnet() {
+  log "no Tailscale credential in env — skipping tailnet."
+  log "Cloud sibling path is SPORT_REPO_TOKEN + GitHub API until TS_API_KEY or TAILSCALE_AUTHKEY is present."
+}
+
+resolve_authkey() {
+  if [[ -n "${TAILSCALE_AUTHKEY:-}" ]]; then
+    return 0
+  fi
+  if [[ -n "${TS_OAUTH_CLIENT_SECRET:-}" ]]; then
+    TAILSCALE_AUTHKEY="${TS_OAUTH_CLIENT_SECRET}?ephemeral=true&preauthorized=true"
+    TS_ADVERTISE_TAGS="${TAILSCALE_ADVERTISE_TAGS:-tag:cursor-cloud}"
+    log "using TS_OAUTH_CLIENT_SECRET for tailscale up (redacted)"
+    return 0
+  fi
+  local mint_py="${SCRIPT_DIR}/cloud_tailscale_mint_key.py"
+  if [[ -f "${mint_py}" && -n "${TS_API_KEY:-}${TAILSCALE_API_KEY:-}" ]]; then
+    local minted
+    minted="$(python3 "${mint_py}")" || true
+    if [[ -n "${minted}" ]]; then
+      TAILSCALE_AUTHKEY="${minted}"
+      log "minted ephemeral Tailscale auth key via TS_API_KEY (redacted)"
+      return 0
+    fi
+    log "TS_API_KEY present but mint returned empty"
+  fi
+  return 1
 }
 
 install_cli() {
@@ -84,19 +111,26 @@ start_daemon() {
 }
 
 bring_up() {
-  if [[ -z "${TAILSCALE_AUTHKEY:-}" ]]; then
-    die_no_key
+  if ! resolve_authkey; then
+    skip_tailnet
+    return 0
   fi
   if tailscale_cmd status --json 2>/dev/null | grep -q '"BackendState": "Running"'; then
     log "already up as ${TS_HOSTNAME}"
     return 0
   fi
   log "tailscale up hostname=${TS_HOSTNAME} (auth key redacted)"
-  tailscale_cmd up \
-    --auth-key="${TAILSCALE_AUTHKEY}" \
-    --hostname="${TS_HOSTNAME}" \
-    --accept-routes \
+  local -a up_args=(
+    up
+    --auth-key="${TAILSCALE_AUTHKEY}"
+    --hostname="${TS_HOSTNAME}"
+    --accept-routes
     --timeout=45s
+  )
+  if [[ -n "${TS_ADVERTISE_TAGS:-}" ]]; then
+    up_args+=(--advertise-tags="${TS_ADVERTISE_TAGS}")
+  fi
+  tailscale_cmd "${up_args[@]}"
 }
 
 status_line() {
@@ -105,8 +139,27 @@ status_line() {
     return 1
   fi
   tailscale_cmd status
-  log "iMac: tailscale ssh ${IMAC_HOST}"
+  log "iMac MagicDNS ${IMAC_HOST} (only when the tailnet is up)"
   log "SOCKS5 localhost:${SOCKS_PORT} — set ALL_PROXY only on iMac-bound commands, never globally"
+}
+
+bind_github() {
+  local env_py="${SCRIPT_DIR}/cloud_github_git_env.py"
+  local probe_py="${SCRIPT_DIR}/cloud_github_siblings.py"
+  if [[ -f "${env_py}" ]]; then
+    local exports
+    exports="$(python3 "${env_py}")" || log "github git env apply failed"
+    if [[ -n "${exports}" ]]; then
+      eval "${exports}"
+      log "git HTTPS extraheader replaced with SPORT_REPO_TOKEN (redacted)"
+    fi
+  fi
+  if [[ "${CLOUD_GITHUB_SKIP_PROBE:-}" == "1" ]]; then
+    return 0
+  fi
+  if [[ -f "${probe_py}" ]]; then
+    python3 "${probe_py}" --probe || log "github sibling probe failed"
+  fi
 }
 
 case "${MODE}" in
@@ -117,13 +170,19 @@ case "${MODE}" in
   --status|status)
     status_line
     ;;
-  --imac|imac)
-    if [[ -z "${TAILSCALE_AUTHKEY:-}" ]]; then
-      die_no_key
+  --imac|imac|--jobhub|jobhub)
+    if ! resolve_authkey; then
+      skip_tailnet
+      bind_github
+      exit 0
     fi
     install_cli
     start_daemon
     bring_up
+    bind_github
+    if [[ "${MODE}" == "--jobhub" || "${MODE}" == "jobhub" ]]; then
+      exec tailscale --socket="${SOCKET}" ssh "${IMAC_HOST}" python3 -m jobhub "${@:2}"
+    fi
     exec tailscale --socket="${SOCKET}" ssh "${IMAC_HOST}" "${@:2}"
     ;;
   --dry-check|dry-check)
@@ -136,16 +195,19 @@ case "${MODE}" in
     log "dry-check ok userspace socks5=${SOCKS_PORT} imac=${IMAC_HOST} hostname=${TS_HOSTNAME}"
     ;;
   up|"")
-    if [[ -z "${TAILSCALE_AUTHKEY:-}" ]]; then
-      die_no_key
+    if ! resolve_authkey; then
+      skip_tailnet
+      bind_github
+      exit 0
     fi
     install_cli
     start_daemon
     bring_up
     status_line || true
+    bind_github
     ;;
   *)
-    log "usage: $0 [up|--install-only|--status|--imac|--dry-check]"
+    log "usage: $0 [up|--install-only|--status|--imac|--jobhub|--dry-check]"
     exit 2
     ;;
 esac
