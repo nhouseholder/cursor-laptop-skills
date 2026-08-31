@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cursor-laptop-skills",
-  "description": "Account-wide Cloud slash commands: /kg, /fybr, /get-ready, /wrap-up, /understand-and-refactor, /performance-optimize, /clean-architecture-rebuild. Cloud agents save standing memory to Engram MCP.",
-  "version": "1.1.2",
+  "description": "Account-wide Cloud slash commands plus always-on Engram saves and Tailscale userspace to the iMac.",
+  "version": "1.2.0",
   "author": {
     "name": "Nicholas Householder"
   },

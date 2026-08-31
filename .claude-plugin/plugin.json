@@ -1,6 +1,6 @@
 {
   "name": "cursor-laptop-skills",
-  "description": "Account-wide slash commands: /kg, /fybr, /get-ready, /wrap-up, plus the three laptop refactor skills.",
+  "description": "Account-wide slash commands plus always-on Engram saves and Tailscale userspace to the iMac.",
   "author": {
     "name": "Nicholas Householder"
   },
