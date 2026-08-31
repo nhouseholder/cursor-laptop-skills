@@ -11,7 +11,7 @@ Tools: `mem_save`, `mem_search`, `mem_context`, `mem_session_summary` (namespace
 
 ## When MCP is down
 
-If GetDynamicTools reports Engram `namespaceStatus: error`, the usual cause on Cloud VMs is a missing `engram` binary (`command: engram mcp --tools=agent`). Say Engram is unavailable. Do not fake a save. Diamondpredictions install: `scripts/cloud_install_engram.sh`.
+If GetDynamicTools reports Engram `namespaceStatus: error`, the usual cause on Cloud VMs is a missing `engram` binary (`command: engram mcp --tools=agent`). Say Engram is unavailable. Do not fake a save. Account plugin install: `scripts/cloud_install_engram.sh` (also hydrates Cloud autosync from R2).
 
 ## When to save (do not wait to be asked)
 
@@ -22,4 +22,4 @@ If GetDynamicTools reports Engram `namespaceStatus: error`, the usual cause on C
 
 `mem_save`: title, type, scope `project`, stable `topic_key`, content with What / Why / Where / Learned.
 
-Other agents only see the write when Engram Cloud autosync is on (`ENGRAM_CLOUD_AUTOSYNC=1`, `ENGRAM_CLOUD_TOKEN`, `ENGRAM_CLOUD_SERVER`). A local SQLite on this VM is not the iMac store.
+Other agents only see the write when Engram Cloud autosync is on. The account plugin wrapper sets `ENGRAM_CLOUD_AUTOSYNC=1` and loads token/server from `~/.engram/cloud.json` after `scripts/cloud_engram_hydrate.sh`. A local SQLite on this VM is not the iMac store.
