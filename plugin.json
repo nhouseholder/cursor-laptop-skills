@@ -1,13 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cursor-laptop-skills",
-  "description": "Account-wide Cloud slash commands plus always-on Engram saves and Tailscale userspace to the iMac.",
-  "version": "1.3.1",
+  "description": "Account-wide Cloud slash commands plus Engram Cloud MCP (autosync) and Tailscale userspace to the iMac.",
+  "version": "1.4.0",
   "author": {
     "name": "Nicholas Householder"
   },
   "license": "MIT",
   "repository": "https://github.com/nhouseholder/cursor-laptop-skills",
   "skills": "./skills",
-  "commands": "./commands"
+  "commands": "./commands",
+  "mcpServers": "./mcp.json"
 }

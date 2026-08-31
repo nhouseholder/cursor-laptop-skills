@@ -62,7 +62,7 @@ Use the **Engram** plugin tools already on the agent (`mem_save`, `mem_session_s
 1. `mem_save` — one observation per standing fact (decision / architecture / preference / bugfix). Reuse `topic_key` when the topic evolved.
 2. `mem_session_summary` — Goal, Instructions, Discoveries, Accomplished, Next Steps, Relevant Files.
 
-Cloud VMs only share that write with the iMac / other agents when `ENGRAM_CLOUD_AUTOSYNC=1` and `ENGRAM_CLOUD_TOKEN` + `ENGRAM_CLOUD_SERVER` are set. If those are missing, still save locally **and** say the store is not replicated.
+Cloud VMs only share that write with the iMac / other agents when the account plugin wrapper has hydrated `~/.engram/cloud.json` (R2 `prompt-betting-engram/client.json`) and exported `ENGRAM_CLOUD_AUTOSYNC=1`. If hydrate skipped because Cloudflare creds are missing, still save locally **and** say the store is not replicated.
 
 ## 5. Commit (do not ship)
 

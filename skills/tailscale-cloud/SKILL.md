@@ -26,6 +26,11 @@ if [[ -f "${DIR}/cloud_github_git_env.py" ]]; then
 elif [[ -f scripts/cloud_github_git_env.py ]]; then
   eval "$(python3 scripts/cloud_github_git_env.py)"
 fi
+if [[ -f "${DIR}/cloud_install_engram.sh" ]]; then
+  bash "${DIR}/cloud_install_engram.sh"
+elif [[ -f scripts/cloud_install_engram.sh ]]; then
+  bash scripts/cloud_install_engram.sh
+fi
 bash "${SCRIPT}"
 ```
 
