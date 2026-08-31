@@ -39,6 +39,8 @@ bash "${SCRIPT}" --jobhub run prompt-betting.daily-ai-pipeline
 
 HQ trees live at `/Volumes/Extreme Pro/ProjectsHQ` and `~/ProjectsHQ` on that host.
 
+SSH as `nicholashouseholder@nicholass-imac` (`TAILSCALE_SSH_USER`). `--jobhub` runs the iMac venv `python -m jobhub`.
+
 Auth resolution inside the script, in order: `TAILSCALE_AUTHKEY` → `TS_OAUTH_CLIENT_SECRET` (passed to `tailscale up` with ephemeral/preauthorized) → mint ephemeral key via `TS_API_KEY` (`scripts/cloud_tailscale_mint_key.py`). Missing all three: skip the tailnet, bind GitHub, exit 0. Do not invent a `tskey-`.
 
 ## APIs already on the agent
