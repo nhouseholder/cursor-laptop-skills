@@ -13,15 +13,35 @@
 # Do not export HTTP_PROXY/HTTPS_PROXY globally — that would send GitHub
 # and Cloudflare through the tailnet and break the job.
 #
-# Auth: TAILSCALE_AUTHKEY if present (never echo it). Missing key: skip the
-# tailnet, bind GitHub, exit 0 so `start` does not brick the VM.
+# Auth: TAILSCALE_AUTHKEY / TS_API_KEY from the process environment, or from
+# ~/.claude/credentials/tailscale.env (0600, never in git). Missing all three
+# (auth key, API key, OAuth secret): skip the tailnet, bind GitHub, exit 0.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${TAILSCALE_CREDS_FILE+x}" ]]; then
+  CREDS_TAILSCALE="${TAILSCALE_CREDS_FILE}"
+else
+  CREDS_TAILSCALE="${HOME}/.claude/credentials/tailscale.env"
+fi
+
+load_local_creds() {
+  if [[ -f "${CREDS_TAILSCALE}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "${CREDS_TAILSCALE}"
+    set +a
+  fi
+}
+
+load_local_creds
+
 STATE_DIR="${TAILSCALE_STATE_DIR:-${HOME}/.local/share/tailscale}"
 SOCKS_PORT="${TAILSCALE_SOCKS_PORT:-1055}"
 HTTP_PROXY_PORT="${TAILSCALE_HTTP_PROXY_PORT:-1054}"
 IMAC_HOST="${IMAC_TAILSCALE_HOST:-nicholass-imac}"
+IMAC_SSH_USER="${TAILSCALE_SSH_USER:-nicholashouseholder}"
+IMAC_JOBHUB_PY="${TAILSCALE_JOBHUB_PY:-/Users/nicholashouseholder/ProjectsHQ/jobhub/runtime/venv/bin/python}"
 SHORT_HOST="$(hostname -s 2>/dev/null || echo cloud)"
 TS_HOSTNAME="${TAILSCALE_HOSTNAME:-cursor-cloud-${SHORT_HOST}}"
 SOCKET="${STATE_DIR}/tailscaled.sock"
@@ -139,7 +159,7 @@ status_line() {
     return 1
   fi
   tailscale_cmd status
-  log "iMac MagicDNS ${IMAC_HOST} (only when the tailnet is up)"
+  log "iMac MagicDNS ${IMAC_SSH_USER}@${IMAC_HOST} (only when the tailnet is up)"
   log "SOCKS5 localhost:${SOCKS_PORT} — set ALL_PROXY only on iMac-bound commands, never globally"
 }
 
@@ -181,9 +201,10 @@ case "${MODE}" in
     bring_up
     bind_github
     if [[ "${MODE}" == "--jobhub" || "${MODE}" == "jobhub" ]]; then
-      exec tailscale --socket="${SOCKET}" ssh "${IMAC_HOST}" python3 -m jobhub "${@:2}"
+      exec tailscale --socket="${SOCKET}" ssh "${IMAC_SSH_USER}@${IMAC_HOST}" \
+        "${IMAC_JOBHUB_PY}" -m jobhub "${@:2}"
     fi
-    exec tailscale --socket="${SOCKET}" ssh "${IMAC_HOST}" "${@:2}"
+    exec tailscale --socket="${SOCKET}" ssh "${IMAC_SSH_USER}@${IMAC_HOST}" "${@:2}"
     ;;
   --dry-check|dry-check)
     grep -q -- '--tun=userspace-networking' "$0"
@@ -192,7 +213,7 @@ case "${MODE}" in
       log "refusing: script would export a global HTTP proxy"
       exit 1
     fi
-    log "dry-check ok userspace socks5=${SOCKS_PORT} imac=${IMAC_HOST} hostname=${TS_HOSTNAME}"
+    log "dry-check ok userspace socks5=${SOCKS_PORT} imac=${IMAC_SSH_USER}@${IMAC_HOST} hostname=${TS_HOSTNAME}"
     ;;
   up|"")
     if ! resolve_authkey; then
