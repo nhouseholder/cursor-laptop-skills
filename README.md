@@ -22,7 +22,20 @@ This plugin is (3). Do not vendor copies into product repos.
 | `/performance-optimize` | Slowness, memory, extra rendering. Measurable target required. `--report-only` baselines only. |
 | `/clean-architecture-rebuild` | Same behavior; new seams / folders / decoupling. `--report-only` proposes the folder plan. |
 
-Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules. Exception: `skills/engram-save/SKILL.md` is always-on so Cloud Agents `mem_save` during the session, not only at wrap-up.
+Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules. Exceptions that **are** always-on:
+
+- `skills/engram-save/SKILL.md` — `mem_save` during the session, not only at wrap-up
+- `skills/tailscale-cloud/SKILL.md` — join the tailnet in userspace and SSH to `nicholass-imac`
+
+## Tailscale (every Cloud Agent)
+
+Cursor has **no** account-wide `start` script. What actually follows every new Cloud environment on this account:
+
+1. Cursor **User** secret `TAILSCALE_AUTHKEY` (Runtime Secret — not environment-scoped)
+2. This plugin skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`)
+3. Product repos that opt in: `"start": "bash scripts/cloud_tailscale_up.sh"` in `.cursor/environment.json` so the daemon comes up at boot, not after the model reads the skill
+
+iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put the auth key in a repo.
 
 ## Engram (existing MCP)
 
