@@ -11,7 +11,7 @@ Tools: `mem_save`, `mem_search`, `mem_context`, `mem_session_summary` (namespace
 
 ## When MCP is down
 
-If GetDynamicTools reports Engram `namespaceStatus: error`, the usual cause on Cloud VMs is a missing `engram` binary (`command: engram mcp --tools=agent`). Say Engram is unavailable. Do not fake a save. Account plugin install: `scripts/cloud_install_engram.sh` (also hydrates Cloud autosync from R2).
+If GetDynamicTools reports Engram `namespaceStatus: error`, the usual cause is a missing `engram` binary (`command: engram mcp --tools=agent`) **and** an old plugin that exited 127 instead of installing. Run `scripts/cloud_install_engram.sh` (self-heal is in `cloud_engram_mcp.sh` as of v1.5.0). Hydrate Cloud autosync from R2. This running agent cannot rediscover a failed stdio MCP — a new agent is required after PATH/`engram` is on the snapshot. Do not fake a save. Do not point at `engram-memory.com`.
 
 ## When to save (do not wait to be asked)
 

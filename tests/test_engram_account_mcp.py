@@ -30,7 +30,7 @@ class McpManifestTests(unittest.TestCase):
     def test_cursor_plugin_manifest_points_at_mcp_json(self) -> None:
         manifest = json.loads((ROOT / ".cursor-plugin" / "plugin.json").read_text())
         self.assertEqual(manifest["mcpServers"], "./mcp.json")
-        self.assertGreaterEqual(tuple(int(p) for p in manifest["version"].split(".")), (1, 4, 0))
+        self.assertGreaterEqual(tuple(int(p) for p in manifest["version"].split(".")), (1, 5, 0))
 
 
 class HydrateTests(unittest.TestCase):
@@ -133,6 +133,98 @@ class WrapperTests(unittest.TestCase):
             self.assertIn("ARG=mcp", proc.stdout)
             self.assertNotIn("wrapper-secret", proc.stdout)
             self.assertNotIn("wrapper-secret", proc.stderr)
+
+    def test_wrapper_self_heals_when_binary_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            libexec = home / ".local" / "libexec"
+            libexec.mkdir(parents=True)
+            real = libexec / "engram"
+            installer = Path(tmp) / "cloud_install_engram.sh"
+            installer.write_text(
+                "#!/usr/bin/env bash\n"
+                f"install -m 0755 /bin/true {real}\n"
+            )
+            installer.chmod(0o755)
+            # Place installer next to the wrapper copy used as SCRIPT_DIR.
+            wrap_dir = Path(tmp) / "scripts"
+            wrap_dir.mkdir()
+            (wrap_dir / "cloud_install_engram.sh").write_text(installer.read_text())
+            (wrap_dir / "cloud_install_engram.sh").chmod(0o755)
+            wrap = wrap_dir / "cloud_engram_mcp.sh"
+            wrap.write_text((SCRIPTS / "cloud_engram_mcp.sh").read_text())
+            wrap.chmod(0o755)
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env.pop("ENGRAM_BIN", None)
+            env["ENGRAM_BIN_CANDIDATES"] = str(real)
+            env["PATH"] = f"{wrap_dir}:{env['PATH']}"
+            proc = subprocess.run(
+                ["bash", str(wrap), "version"],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertTrue(real.exists())
+            self.assertIn("binary missing; installing", proc.stderr)
+
+    def test_write_cursor_mcp_merges_without_tokens(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            cursor = home / ".cursor"
+            cursor.mkdir(parents=True)
+            (cursor / "mcp.json").write_text(
+                json.dumps(
+                    {
+                        "mcpServers": {
+                            "other": {"url": "https://example.test/mcp"},
+                            "engram": {
+                                "command": "uvx",
+                                "env": {"ENGRAM_CLOUD_TOKEN": "should-drop"},
+                            },
+                        }
+                    }
+                )
+            )
+            wrap = home / ".local" / "bin" / "engram"
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env["ENGRAM_WRAP_BIN"] = str(wrap)
+            proc = subprocess.run(
+                ["python3", str(SCRIPTS / "write_cursor_mcp.py")],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            data = json.loads((cursor / "mcp.json").read_text())
+            self.assertEqual(data["mcpServers"]["other"]["url"], "https://example.test/mcp")
+            engram = data["mcpServers"]["engram"]
+            self.assertEqual(engram["command"], str(wrap))
+            self.assertEqual(engram["args"], ["mcp", "--tools=agent"])
+            self.assertEqual(engram["env"]["ENGRAM_CLOUD_AUTOSYNC"], "1")
+            self.assertNotIn("ENGRAM_CLOUD_TOKEN", json.dumps(data))
+            self.assertNotIn("should-drop", json.dumps(data))
+
+    def test_installer_pins_darwin_and_linux(self) -> None:
+        text = (SCRIPTS / "cloud_install_engram.sh").read_text()
+        self.assertIn("engram_1.20.0_darwin_arm64.tar.gz", text)
+        self.assertIn("engram_1.20.0_darwin_amd64.tar.gz", text)
+        self.assertIn("engram_1.20.0_linux_amd64.tar.gz", text)
+        self.assertIn("2363d5012f23e58878f86c3ddcc1f63cfe9dcf3eec7f413e70eaafcbb9d394cc", text)
+
+    def test_launchd_skipped_on_linux(self) -> None:
+        proc = subprocess.run(
+            ["bash", str(SCRIPTS / "install_engram_launchd.sh")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("launchd skipped (not Darwin)", proc.stderr)
 
 
 if __name__ == "__main__":

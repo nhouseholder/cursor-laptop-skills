@@ -40,9 +40,11 @@ GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inje
 
 ## Engram Cloud MCP (this plugin)
 
-`mcp.json` launches `scripts/cloud_engram_mcp.sh mcp --tools=agent` with `ENGRAM_CLOUD_AUTOSYNC=1`. That is the same Gentleman-Programming agent profile (`mem_save` / `mem_search` / `mem_session_summary`). Do not add a second memory product.
+`mcp.json` launches `scripts/cloud_engram_mcp.sh mcp --tools=agent` with `ENGRAM_CLOUD_AUTOSYNC=1`. That is the same Gentleman-Programming agent profile (`mem_save` / `mem_search` / `mem_session_summary`). Do not add a second memory product (not `engram-memory.com`).
 
-Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev`. `scripts/cloud_install_engram.sh` pins engram 1.20.0 into `~/.local/libexec/engram` and installs the wrapper on PATH so the marketplace Engram plugin autosyncs too.
+The wrapper **self-heals**: if `~/.local/libexec/engram` is missing it runs `cloud_install_engram.sh` (Linux amd64/arm64 and Darwin amd64/arm64, sha256-pinned) then hydrates Cloud autosync. stdout stays MCP-clean. A missing binary must never leave the Engram namespace in `error`.
+
+Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev` (`GET /health` → `{"status":"ok","service":"engram-cloud"}`). The installer also writes global `~/.cursor/mcp.json` to the autosync wrapper (desktop + Cloud) and, on macOS, a KeepAlive LaunchAgent for `engram serve`.
 
 A local SQLite without that hydrate is not the iMac store.
 
@@ -69,7 +71,7 @@ Laptop remains canon when a skill file exists there. After a laptop edit: copy i
 commands/     # what Cloud `/` indexes (name + description frontmatter)
 skills/       # the protocol each command reads
 scripts/      # Tailscale, git extraheader, Engram install/hydrate/MCP wrapper
-mcp.json      # account Engram MCP (stdio wrapper + Cloud autosync)
+mcp.json      # account Engram MCP (self-healing stdio wrapper + Cloud autosync)
 .cursor-plugin/plugin.json
 plugin.json   # Agent Plugins manifest (skills + commands + mcp)
 ```
