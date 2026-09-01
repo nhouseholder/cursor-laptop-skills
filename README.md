@@ -33,7 +33,7 @@ Cursor Cloud does **not** run this plugin's `mcp.json` (Cloud enables the plugin
 
 1. Paste `python3 scripts/cloud_hq_mcp.py --print-mcp` as personal MCP (https://cursor.com/agents) **and** Team MCP (https://cursor.com/dashboard/integrations). Exact steps: `docs/CLOUD_ACCOUNT_MCP.md`.
 2. Disable the marketplace Engram plugin on Cloud Agents (`command: engram` exits 127 on a VM that has not installed yet and leaves namespace `Engram` in `error`).
-3. Cursor **User** secrets `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`) — not environment-scoped.
+3. Cursor **User** secrets `TS_API_KEY` / `TAILSCALE_AUTHKEY` when injected. If they are not, `cloud_tailscale_hydrate.sh` GETs private R2 `prompt-betting-engram/tailscale.env` with `CLOUDFLARE_API_TOKEN`. Do not ask Nicholas to re-paste a Tailscale key.
 4. Product-repo `"start": "bash scripts/cloud_agent_start.sh"` is still useful (Engram on PATH + `engram serve` + Tailscale userspace) but it is **per environment**. The dashboard MCP is what follows a brand-new repo.
 
 The launcher finds this plugin under `~/.cursor/plugins/cache/*cursor-laptop-skills*` (already on Cloud after the account plugin install) or clones this repo with `SPORT_REPO_TOKEN` extraheader, then execs `cloud_engram_mcp.sh` / `cloud_tailscale_mcp.py`. GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; Tailscale MCP tools `imac_exec` / `jobhub` SSH to the iMac. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
@@ -51,7 +51,7 @@ A local SQLite without that hydrate is not the iMac store.
 
 ## Tailscale iMac MCP (this plugin)
 
-`mcp.json` also launches `scripts/cloud_tailscale_mcp.py`. Tools: `tailscale_status`, `tailscale_up`, `imac_exec`, `jobhub`. Initialize succeeds even when `TS_API_KEY` is missing — the tools then report the skip. The installer merges `tailscale-imac` into `~/.cursor/mcp.json` next to Engram. Requires account-wide User secret `TS_API_KEY` (optional `TAILSCALE_AUTHKEY` / `TS_OAUTH_CLIENT_SECRET`). Never environment-scope those keys.
+`mcp.json` also launches `scripts/cloud_tailscale_mcp.py`. Tools: `tailscale_status`, `tailscale_up`, `imac_exec`, `jobhub`. Initialize succeeds even when `TS_API_KEY` is missing — the tools then report the skip. The installer merges `tailscale-imac` into `~/.cursor/mcp.json` next to Engram. Cloud hydrates `TS_API_KEY` from private R2 when the User secret is not injected. Never environment-scope those keys. Never put them in git.
 
 ## Install (required once, on the Cursor account)
 

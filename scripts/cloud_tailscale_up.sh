@@ -14,8 +14,11 @@
 # and Cloudflare through the tailnet and break the job.
 #
 # Auth: TAILSCALE_AUTHKEY / TS_API_KEY from the process environment, or from
-# ~/.claude/credentials/tailscale.env (0600, never in git). Missing all three
-# (auth key, API key, OAuth secret): skip the tailnet, bind GitHub, exit 0.
+# ~/.claude/credentials/tailscale.env (0600, never in git). If that file is
+# missing, scripts/cloud_tailscale_hydrate.sh GETs private R2
+# prompt-betting-engram/tailscale.env with CLOUDFLARE_API_TOKEN (already on
+# Cloud). Missing all three (auth key, API key, OAuth secret): skip the
+# tailnet, bind GitHub, exit 0. Never print a tskey-.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,6 +37,9 @@ load_local_creds() {
   fi
 }
 
+if [[ -x "${SCRIPT_DIR}/cloud_tailscale_hydrate.sh" ]]; then
+  TAILSCALE_CREDS_FILE="${CREDS_TAILSCALE}" bash "${SCRIPT_DIR}/cloud_tailscale_hydrate.sh" >/dev/null || true
+fi
 load_local_creds
 
 STATE_DIR="${TAILSCALE_STATE_DIR:-${HOME}/.local/share/tailscale}"

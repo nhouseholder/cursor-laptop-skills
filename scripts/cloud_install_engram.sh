@@ -111,6 +111,9 @@ fi
 if [[ -f "${SCRIPT_DIR}/cloud_tailscale_mcp.py" ]]; then
   install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_mcp.py" "${LIB_DEST}/cloud_tailscale_mcp.py"
 fi
+if [[ -f "${SCRIPT_DIR}/cloud_tailscale_hydrate.sh" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_hydrate.sh" "${LIB_DEST}/cloud_tailscale_hydrate.sh"
+fi
 if [[ -f "${SCRIPT_DIR}/cloud_tailscale_up.sh" ]]; then
   install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_up.sh" "${LIB_DEST}/cloud_tailscale_up.sh"
 fi
