@@ -11,7 +11,7 @@ This plugin is installed on the **account**. Cursor has no account-wide `start` 
 2. This skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`)
 3. Product repos that opt in: `"start": "bash scripts/cloud_tailscale_up.sh"` in `.cursor/environment.json`
 
-Already injected on Cloud for this account (do not ask Nicholas to re-paste them): `SPORT_REPO_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_*`. GitHub MCP, Cloudflare MCP, and JobHub MCP are already connected. JobHub MCP is **read-only** (list/status/logs). Starting or repairing a job is Tailscale SSH to the iMac.
+Already injected on Cloud for this account (do not ask Nicholas to re-paste them): `SPORT_REPO_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_*`. GitHub MCP, Cloudflare MCP, and JobHub MCP are already connected. JobHub MCP is **read-only** (list/status/logs). Starting or repairing a job is Tailscale MCP `jobhub` / `imac_exec`, or `bash scripts/cloud_tailscale_up.sh --jobhub` / Tailscale SSH to the iMac.
 
 ## First commands (do not skip)
 
@@ -52,7 +52,7 @@ Auth resolution inside the script, in order: `TAILSCALE_AUTHKEY` → `TS_OAUTH_C
 
 - **GitHub**: `SPORT_REPO_TOKEN` + GitHub MCP. Cursor injects a stale `GIT_CONFIG` bearer extraheader that 401s `git fetch`/`git push`. `eval "$(python3 …/cloud_github_git_env.py)"` replaces it with HTTP Basic. Contents API (`engine/repo_publisher.py` in prompt-betting) works without that eval.
 - **Cloudflare**: `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` + Cloudflare MCP + wrangler. Never pass the token on a CLI argv.
-- **JobHub**: MCP tools `list_jobs`, `job_status`, `tail_log`, `recent_failures`, `site_freshness`, `fleet_rollup`, `secrets_status`. Cannot start/stop jobs. Mutate via `--jobhub` / Tailscale SSH.
+- **JobHub**: MCP tools `list_jobs`, `job_status`, `tail_log`, `recent_failures`, `site_freshness`, `fleet_rollup`, `secrets_status`. Cannot start/stop jobs. Mutate via Tailscale MCP `jobhub` / `imac_exec`, or `--jobhub` / Tailscale SSH.
 
 ## Hard rules
 

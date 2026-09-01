@@ -11,6 +11,13 @@
       "env": {
         "ENGRAM_CLOUD_AUTOSYNC": "1"
       }
+    },
+    "tailscale-imac": {
+      "command": "python3",
+      "args": [
+        "./scripts/cloud_tailscale_mcp.py"
+      ],
+      "cwd": "${PLUGIN_ROOT}"
     }
   }
 }

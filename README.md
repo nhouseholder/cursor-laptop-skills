@@ -33,18 +33,24 @@ Cursor has **no** account-wide `start` script. What actually follows every new C
 
 1. Cursor **User** secrets `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`) — not environment-scoped
 2. This plugin skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`). `TS_API_KEY` mints an ephemeral auth key per boot.
-3. Product repos that opt in: `"start": "bash scripts/cloud_tailscale_up.sh"` in `.cursor/environment.json` so the daemon comes up at boot, not after the model reads the skill
+3. Product repos that opt in: `"start": "bash scripts/cloud_agent_start.sh"` (Engram install/hydrate + `engram serve` + Tailscale userspace). Older `"start": "bash scripts/cloud_tailscale_up.sh"` still joins the tailnet only.
 
-GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; `bash scripts/cloud_tailscale_up.sh --jobhub …` SSHs to the iMac to run jobs. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
+GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; Tailscale MCP tools `imac_exec` / `jobhub` SSH to the iMac to run jobs. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
 
 
 ## Engram Cloud MCP (this plugin)
 
-`mcp.json` launches `scripts/cloud_engram_mcp.sh mcp --tools=agent` with `ENGRAM_CLOUD_AUTOSYNC=1`. That is the same Gentleman-Programming agent profile (`mem_save` / `mem_search` / `mem_session_summary`). Do not add a second memory product.
+`mcp.json` launches `scripts/cloud_engram_mcp.sh mcp --tools=agent` with `ENGRAM_CLOUD_AUTOSYNC=1`. That is the same Gentleman-Programming agent profile (`mem_save` / `mem_search` / `mem_session_summary`). Do not add a second memory product (not `engram-memory.com`).
 
-Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev`. `scripts/cloud_install_engram.sh` pins engram 1.20.0 into `~/.local/libexec/engram` and installs the wrapper on PATH so the marketplace Engram plugin autosyncs too.
+The wrapper **self-heals**: if `~/.local/libexec/engram` is missing it runs `cloud_install_engram.sh` (Linux amd64/arm64 and Darwin amd64/arm64, sha256-pinned) then hydrates Cloud autosync. stdout stays MCP-clean. A missing binary must never leave the Engram namespace in `error`.
+
+Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev` (`GET /health` → `{"status":"ok","service":"engram-cloud"}`). The installer also writes global `~/.cursor/mcp.json` to the autosync wrapper (desktop + Cloud) and, on macOS, a KeepAlive LaunchAgent for `engram serve`.
 
 A local SQLite without that hydrate is not the iMac store.
+
+## Tailscale iMac MCP (this plugin)
+
+`mcp.json` also launches `scripts/cloud_tailscale_mcp.py`. Tools: `tailscale_status`, `tailscale_up`, `imac_exec`, `jobhub`. Initialize succeeds even when `TS_API_KEY` is missing — the tools then report the skip. The installer merges `tailscale-imac` into `~/.cursor/mcp.json` next to Engram. Requires account-wide User secret `TS_API_KEY` (optional `TAILSCALE_AUTHKEY` / `TS_OAUTH_CLIENT_SECRET`). Never environment-scope those keys.
 
 ## Install (required once, on the Cursor account)
 
@@ -69,7 +75,7 @@ Laptop remains canon when a skill file exists there. After a laptop edit: copy i
 commands/     # what Cloud `/` indexes (name + description frontmatter)
 skills/       # the protocol each command reads
 scripts/      # Tailscale, git extraheader, Engram install/hydrate/MCP wrapper
-mcp.json      # account Engram MCP (stdio wrapper + Cloud autosync)
+mcp.json      # account Engram Cloud MCP + Tailscale iMac MCP
 .cursor-plugin/plugin.json
 plugin.json   # Agent Plugins manifest (skills + commands + mcp)
 ```
