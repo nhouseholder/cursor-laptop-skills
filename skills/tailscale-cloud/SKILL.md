@@ -8,8 +8,9 @@ description: "ALWAYS ACTIVE on Cloud Agents. Join the tailnet in userspace, reac
 This plugin is installed on the **account**. Cursor has no account-wide `start` hook. What actually follows every new Cloud environment:
 
 1. Cursor **User** secrets (not environment-scoped): `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`)
-2. This skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`)
-3. Product repos that opt in: `"start": "bash scripts/cloud_tailscale_up.sh"` in `.cursor/environment.json`
+2. If those are not injected, `scripts/cloud_tailscale_hydrate.sh` GETs private R2 `prompt-betting-engram/tailscale.env` with `CLOUDFLARE_API_TOKEN` (already on Cloud) and writes `~/.claude/credentials/tailscale.env` mode `0600`. Do not ask Nicholas to re-paste a Tailscale key.
+3. This skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`)
+4. Product repos that opt in: `"start": "bash scripts/cloud_agent_start.sh"` in `.cursor/environment.json`
 
 Already injected on Cloud for this account (do not ask Nicholas to re-paste them): `SPORT_REPO_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_*`. GitHub MCP, Cloudflare MCP, and JobHub MCP are already connected. JobHub MCP is **read-only** (list/status/logs). Starting or repairing a job is Tailscale MCP `jobhub` / `imac_exec`, or `bash scripts/cloud_tailscale_up.sh --jobhub` / Tailscale SSH to the iMac.
 
@@ -46,7 +47,7 @@ HQ trees live at `/Volumes/Extreme Pro/ProjectsHQ` and `~/ProjectsHQ` on that ho
 
 SSH as `nicholashouseholder@nicholass-imac` (`TAILSCALE_SSH_USER`). `--jobhub` runs the iMac venv `python -m jobhub`.
 
-Auth resolution inside the script, in order: `TAILSCALE_AUTHKEY` → `TS_OAUTH_CLIENT_SECRET` (passed to `tailscale up` with ephemeral/preauthorized) → mint ephemeral key via `TS_API_KEY` (`scripts/cloud_tailscale_mint_key.py`). Missing all three: skip the tailnet, bind GitHub, exit 0. Do not invent a `tskey-`.
+Auth resolution inside the script, in order: R2 hydrate of `tailscale.env` → `TAILSCALE_AUTHKEY` → `TS_OAUTH_CLIENT_SECRET` (passed to `tailscale up` with ephemeral/preauthorized) → mint ephemeral key via `TS_API_KEY` (`scripts/cloud_tailscale_mint_key.py`). Missing all three after hydrate: skip the tailnet, bind GitHub, exit 0. Do not invent a `tskey-`. Do not ask Nicholas to re-paste the API key.
 
 ## APIs already on the agent
 
