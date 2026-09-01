@@ -102,6 +102,15 @@ install -m 0755 "${SCRIPT_DIR}/cloud_engram_mcp.sh" "${LIB_DEST}/cloud_engram_mc
 install -m 0755 "${SCRIPT_DIR}/cloud_install_engram.sh" "${LIB_DEST}/cloud_install_engram.sh"
 install -m 0755 "${SCRIPT_DIR}/write_cursor_mcp.py" "${LIB_DEST}/write_cursor_mcp.py"
 install -m 0755 "${SCRIPT_DIR}/install_engram_launchd.sh" "${LIB_DEST}/install_engram_launchd.sh"
+if [[ -f "${SCRIPT_DIR}/cloud_tailscale_mcp.py" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_mcp.py" "${LIB_DEST}/cloud_tailscale_mcp.py"
+fi
+if [[ -f "${SCRIPT_DIR}/cloud_tailscale_up.sh" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_up.sh" "${LIB_DEST}/cloud_tailscale_up.sh"
+fi
+if [[ -f "${SCRIPT_DIR}/cloud_tailscale_mint_key.py" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_mint_key.py" "${LIB_DEST}/cloud_tailscale_mint_key.py"
+fi
 install -m 0755 "${SCRIPT_DIR}/cloud_engram_mcp.sh" "${WRAP_DEST}/engram"
 if [[ -d /usr/local/bin ]] && sudo -n true >/dev/null 2>&1; then
   sudo install -m 0755 "${SCRIPT_DIR}/cloud_engram_mcp.sh" /usr/local/bin/engram

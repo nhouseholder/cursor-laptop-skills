@@ -26,6 +26,10 @@ class McpManifestTests(unittest.TestCase):
         self.assertEqual(server["cwd"], "${PLUGIN_ROOT}")
         self.assertEqual(server["env"]["ENGRAM_CLOUD_AUTOSYNC"], "1")
         self.assertNotIn("ENGRAM_CLOUD_TOKEN", json.dumps(data))
+        ts = data["mcpServers"]["tailscale-imac"]
+        self.assertEqual(ts["command"], "python3")
+        self.assertEqual(ts["args"], ["./scripts/cloud_tailscale_mcp.py"])
+        self.assertEqual(ts["cwd"], "${PLUGIN_ROOT}")
 
     def test_cursor_plugin_manifest_points_at_mcp_json(self) -> None:
         manifest = json.loads((ROOT / ".cursor-plugin" / "plugin.json").read_text())
@@ -208,6 +212,9 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(engram["env"]["ENGRAM_CLOUD_AUTOSYNC"], "1")
             self.assertNotIn("ENGRAM_CLOUD_TOKEN", json.dumps(data))
             self.assertNotIn("should-drop", json.dumps(data))
+            ts = data["mcpServers"]["tailscale-imac"]
+            self.assertEqual(ts["command"], "python3")
+            self.assertTrue(str(ts["args"][0]).endswith("cloud_tailscale_mcp.py"))
 
     def test_installer_pins_darwin_and_linux(self) -> None:
         text = (SCRIPTS / "cloud_install_engram.sh").read_text()
