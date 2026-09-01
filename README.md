@@ -27,15 +27,16 @@ Skills that back those slashes set `disable-model-invocation: true` on purpose �
 - `skills/engram-save/SKILL.md` — `mem_save` during the session, not only at wrap-up
 - `skills/tailscale-cloud/SKILL.md` — Tailscale userspace, JobHub on `nicholass-imac`, GitHub extraheader fix, Cloudflare tokens already on Cloud
 
-## Cloud HQ (every Cloud Agent)
+## Cloud HQ (every Cloud Agent, every repo)
 
-Cursor has **no** account-wide `start` script. What actually follows every new Cloud environment on this account:
+Cursor Cloud does **not** run this plugin's `mcp.json` (Cloud enables the plugin as skills/commands only) and does **not** read a repo `.cursor/mcp.json`. MCP for Cloud Agents is **account/team dashboard**:
 
-1. Cursor **User** secrets `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`) — not environment-scoped
-2. This plugin skill + `scripts/cloud_tailscale_up.sh` (`tailscaled --tun=userspace-networking`). `TS_API_KEY` mints an ephemeral auth key per boot.
-3. Product repos that opt in: `"start": "bash scripts/cloud_agent_start.sh"` (Engram install/hydrate + `engram serve` + Tailscale userspace). Older `"start": "bash scripts/cloud_tailscale_up.sh"` still joins the tailnet only.
+1. Paste `python3 scripts/cloud_hq_mcp.py --print-mcp` as personal MCP (https://cursor.com/agents) **and** Team MCP (https://cursor.com/dashboard/integrations). Exact steps: `docs/CLOUD_ACCOUNT_MCP.md`.
+2. Disable the marketplace Engram plugin on Cloud Agents (`command: engram` exits 127 on a VM that has not installed yet and leaves namespace `Engram` in `error`).
+3. Cursor **User** secrets `TS_API_KEY` and/or `TAILSCALE_AUTHKEY` (optional `TS_OAUTH_CLIENT_SECRET`) — not environment-scoped.
+4. Product-repo `"start": "bash scripts/cloud_agent_start.sh"` is still useful (Engram on PATH + `engram serve` + Tailscale userspace) but it is **per environment**. The dashboard MCP is what follows a brand-new repo.
 
-GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; Tailscale MCP tools `imac_exec` / `jobhub` SSH to the iMac to run jobs. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
+The launcher finds this plugin under `~/.cursor/plugins/cache/*cursor-laptop-skills*` (already on Cloud after the account plugin install) or clones this repo with `SPORT_REPO_TOKEN` extraheader, then execs `cloud_engram_mcp.sh` / `cloud_tailscale_mcp.py`. GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inject. JobHub MCP is read-only; Tailscale MCP tools `imac_exec` / `jobhub` SSH to the iMac. `eval "$(python3 scripts/cloud_github_git_env.py)"` replaces Cloud's stale git bearer extraheader. iMac MagicDNS: `nicholass-imac`. Do not export `HTTP_PROXY` globally. Do not put keys in a repo.
 
 
 ## Engram Cloud MCP (this plugin)
@@ -44,7 +45,7 @@ GitHub (`SPORT_REPO_TOKEN`) and Cloudflare (`CLOUDFLARE_API_TOKEN`) already inje
 
 The wrapper **self-heals**: if `~/.local/libexec/engram` is missing it runs `cloud_install_engram.sh` (Linux amd64/arm64 and Darwin amd64/arm64, sha256-pinned) then hydrates Cloud autosync. stdout stays MCP-clean. A missing binary must never leave the Engram namespace in `error`.
 
-Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev` (`GET /health` → `{"status":"ok","service":"engram-cloud"}`). The installer also writes global `~/.cursor/mcp.json` to the autosync wrapper (desktop + Cloud) and, on macOS, a KeepAlive LaunchAgent for `engram serve`.
+Cloud token and server URL are **not** in git. `scripts/cloud_engram_hydrate.sh` reads private R2 `prompt-betting-engram/client.json` with `CLOUDFLARE_API_TOKEN` (already injected on Cloud) and writes `~/.engram/cloud.json` mode `0600`. Worker: `https://engram-cloud.nikhouseholdr.workers.dev` (`GET /health` → `{"status":"ok","service":"engram-cloud"}`). The installer also writes global `~/.cursor/mcp.json` from `cloud_hq_mcp.py --print-mcp` (desktop + Cloud) and, on macOS, a KeepAlive LaunchAgent for `engram serve`. Cloud Agents still need that same JSON saved in the MCP dropdown — `~/.cursor/mcp.json` on the VM is not the dashboard.
 
 A local SQLite without that hydrate is not the iMac store.
 
@@ -63,7 +64,7 @@ Until this is installed on the **account**, Cloud `/` will not list these comman
 
 Team Marketplace import of this private repo works the same if you share it with the team.
 
-A sharp-oracle environment snapshot is **not** a substitute. Snapshots follow that environment; they do not follow diamondpredictions / mmalogic / other repos.
+A sharp-oracle environment snapshot is **not** a substitute for Team MCP. Snapshots follow that environment; they do not follow diamondpredictions / mmalogic / other repos. The dashboard MCP does.
 
 ## Update
 
@@ -74,8 +75,9 @@ Laptop remains canon when a skill file exists there. After a laptop edit: copy i
 ```
 commands/     # what Cloud `/` indexes (name + description frontmatter)
 skills/       # the protocol each command reads
-scripts/      # Tailscale, git extraheader, Engram install/hydrate/MCP wrapper
-mcp.json      # account Engram Cloud MCP + Tailscale iMac MCP
+scripts/      # Tailscale, git extraheader, Engram install/hydrate, account-wide MCP launcher
+docs/         # CLOUD_ACCOUNT_MCP.md — dashboard paste for every Cloud session
+mcp.json      # desktop/plugin Engram Cloud MCP + Tailscale iMac MCP (Cloud ignores this)
 .cursor-plugin/plugin.json
 plugin.json   # Agent Plugins manifest (skills + commands + mcp)
 ```

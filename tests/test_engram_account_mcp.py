@@ -34,7 +34,7 @@ class McpManifestTests(unittest.TestCase):
     def test_cursor_plugin_manifest_points_at_mcp_json(self) -> None:
         manifest = json.loads((ROOT / ".cursor-plugin" / "plugin.json").read_text())
         self.assertEqual(manifest["mcpServers"], "./mcp.json")
-        self.assertGreaterEqual(tuple(int(p) for p in manifest["version"].split(".")), (1, 5, 0))
+        self.assertGreaterEqual(tuple(int(p) for p in manifest["version"].split(".")), (1, 6, 0))
 
 
 class HydrateTests(unittest.TestCase):
@@ -207,14 +207,16 @@ class WrapperTests(unittest.TestCase):
             data = json.loads((cursor / "mcp.json").read_text())
             self.assertEqual(data["mcpServers"]["other"]["url"], "https://example.test/mcp")
             engram = data["mcpServers"]["engram"]
-            self.assertEqual(engram["command"], str(wrap))
-            self.assertEqual(engram["args"], ["mcp", "--tools=agent"])
+            self.assertEqual(engram["command"], "python3")
+            self.assertEqual(engram["args"][0], "-c")
+            self.assertEqual(engram["args"][2], "engram")
             self.assertEqual(engram["env"]["ENGRAM_CLOUD_AUTOSYNC"], "1")
             self.assertNotIn("ENGRAM_CLOUD_TOKEN", json.dumps(data))
             self.assertNotIn("should-drop", json.dumps(data))
             ts = data["mcpServers"]["tailscale-imac"]
             self.assertEqual(ts["command"], "python3")
-            self.assertTrue(str(ts["args"][0]).endswith("cloud_tailscale_mcp.py"))
+            self.assertEqual(ts["args"][0], "-c")
+            self.assertEqual(ts["args"][2], "tailscale")
 
     def test_installer_pins_darwin_and_linux(self) -> None:
         text = (SCRIPTS / "cloud_install_engram.sh").read_text()

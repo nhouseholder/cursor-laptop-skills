@@ -2,29 +2,27 @@
 """Merge Engram Cloud + Tailscale iMac stdio MCP into ~/.cursor/mcp.json. No secrets."""
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import stat
 from pathlib import Path
 
 
-def _merge_engram_env(existing: dict) -> dict:
-    old_env = existing.get("env") if isinstance(existing, dict) else None
-    merged = dict(old_env) if isinstance(old_env, dict) else {}
-    merged["ENGRAM_CLOUD_AUTOSYNC"] = "1"
-    merged.pop("ENGRAM_CLOUD_TOKEN", None)
-    merged.pop("ENGRAM_CLOUD_SERVER", None)
-    return merged
+def _hq():
+    spec = importlib.util.spec_from_file_location(
+        "_cloud_hq_mcp",
+        Path(__file__).resolve().parent / "cloud_hq_mcp.py",
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cloud_hq_mcp.py missing next to write_cursor_mcp.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def main() -> int:
     home = Path(os.environ.get("HOME") or Path.home())
-    wrap = Path(os.environ.get("ENGRAM_WRAP_BIN") or (home / ".local" / "bin" / "engram"))
-    here = Path(__file__).resolve().parent
-    ts_script = Path(
-        os.environ.get("TAILSCALE_MCP_SCRIPT")
-        or (here / "cloud_tailscale_mcp.py")
-    )
     path = home / ".cursor" / "mcp.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     data: dict = {}
@@ -39,20 +37,13 @@ def main() -> int:
     if not isinstance(servers, dict):
         servers = {}
         data["mcpServers"] = servers
-    existing = servers.get("engram") if isinstance(servers.get("engram"), dict) else {}
-    servers["engram"] = {
-        "command": str(wrap),
-        "args": ["mcp", "--tools=agent"],
-        "env": _merge_engram_env(existing if isinstance(existing, dict) else {}),
-    }
-    if ts_script.is_file():
-        servers["tailscale-imac"] = {
-            "command": "python3",
-            "args": [str(ts_script)],
-        }
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    account = _hq().account_mcp_document()["mcpServers"]
+    servers["engram"] = account["engram"]
+    servers["tailscale-imac"] = account["tailscale-imac"]
+    blob = json.dumps(data, indent=2) + "\n"
+    path.write_text(blob)
     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
-    print(f"[engram-cloud] wrote {path} command={wrap}", flush=True)
+    print(f"[engram-cloud] wrote {path} launcher=cloud_hq_mcp.py", flush=True)
     return 0
 
 
