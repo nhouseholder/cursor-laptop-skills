@@ -102,6 +102,12 @@ install -m 0755 "${SCRIPT_DIR}/cloud_engram_mcp.sh" "${LIB_DEST}/cloud_engram_mc
 install -m 0755 "${SCRIPT_DIR}/cloud_install_engram.sh" "${LIB_DEST}/cloud_install_engram.sh"
 install -m 0755 "${SCRIPT_DIR}/write_cursor_mcp.py" "${LIB_DEST}/write_cursor_mcp.py"
 install -m 0755 "${SCRIPT_DIR}/install_engram_launchd.sh" "${LIB_DEST}/install_engram_launchd.sh"
+if [[ -f "${SCRIPT_DIR}/cloud_hq_mcp.py" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_hq_mcp.py" "${LIB_DEST}/cloud_hq_mcp.py"
+fi
+if [[ -f "${SCRIPT_DIR}/cloud_hq_mcp.sh" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_hq_mcp.sh" "${LIB_DEST}/cloud_hq_mcp.sh"
+fi
 if [[ -f "${SCRIPT_DIR}/cloud_tailscale_mcp.py" ]]; then
   install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_mcp.py" "${LIB_DEST}/cloud_tailscale_mcp.py"
 fi
