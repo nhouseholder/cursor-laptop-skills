@@ -176,9 +176,19 @@ def mcp_server(mode: str) -> dict:
     return block
 
 
+JOBHUB_MCP_URL = "https://jobhub-cloud-mcp.nikhouseholdr.workers.dev/mcp"
+
+
 def account_mcp_document() -> dict:
+    """Every server a Cloud Agent needs, in dashboard paste form.
+
+    jobhub is a plain HTTP server: the Cloudflare Worker injects the iMac token from KV,
+    so the client config carries no secret and needs no Tailscale. engram and
+    tailscale-imac are stdio launchers that self-heal on a fresh VM.
+    """
     return {
         "mcpServers": {
+            "jobhub": {"url": JOBHUB_MCP_URL},
             "engram": mcp_server("engram"),
             "tailscale-imac": mcp_server("tailscale"),
         }

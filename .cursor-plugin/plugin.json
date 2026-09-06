@@ -1,7 +1,7 @@
 {
   "name": "cursor-laptop-skills",
   "displayName": "Laptop skills (Cloud)",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Slash commands for every Cloud Agent plus account-wide Engram Cloud MCP (autosync) and Tailscale iMac MCP that self-heal on Cloud.",
   "author": {
     "name": "Nicholas Householder"

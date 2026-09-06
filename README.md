@@ -21,17 +21,26 @@ This plugin is (3). Do not vendor copies into product repos.
 | `/understand-and-refactor` | First session on an unfamiliar product repo. Map, then highest-ROI refactors. `--report-only` maps only. |
 | `/performance-optimize` | Slowness, memory, extra rendering. Measurable target required. `--report-only` baselines only. |
 | `/clean-architecture-rebuild` | Same behavior; new seams / folders / decoupling. `--report-only` proposes the folder plan. |
+| `/handoff` | Full session close: bug scan, commit sweep, version bump, project log, handoff file, roadmap. Heavier than `/wrap-up`. |
+| `/whats-next` | Strategic prioritizer. Scores impact vs effort vs confidence vs decay against the north star, and audits its own prior calls. |
+| `/code-review` | Review changes since a fixed point on two axes — repo coding standards, and match to what the issue asked for. |
+| `/confidence-check` | Pre-execution gate. Scores readiness on 5 criteria; under 70% it stops and asks rather than building the wrong thing. |
+| `/estimate` | Effort, time and complexity breakdown with confidence intervals. Does not start work. |
+| `/reflect` | Mid-session or closing retrospective: what got done versus the original goal, and what drifted. |
+| `/grilling` | Stress-test a plan or decision by arguing against it relentlessly. |
+| `/debate` | Formal 3-round debate against Gemini as challenger, ending in a verdict. Needs a backend key; says so plainly if absent. |
 
 Skills that back those slashes set `disable-model-invocation: true` on purpose — they load when you type `/`, not as silent always-on rules. Exceptions that **are** always-on:
 
 - `skills/engram-save/SKILL.md` — `mem_save` during the session, not only at wrap-up
 - `skills/tailscale-cloud/SKILL.md` — Tailscale userspace, JobHub on `nicholass-imac`, GitHub extraheader fix, Cloudflare tokens already on Cloud
+- `skills/hq-law/SKILL.md` — the standing law from `~/AGENTS.md`, which no container ever sees: done means done, unknown is never a value, every posted pick real-money safe, never tell Nick to run a terminal command
 
 ## Cloud HQ (every Cloud Agent, every repo)
 
 Cursor Cloud does **not** run this plugin's `mcp.json` (Cloud enables the plugin as skills/commands only) and does **not** read a repo `.cursor/mcp.json`. MCP for Cloud Agents is **account/team dashboard**:
 
-1. Paste `python3 scripts/cloud_hq_mcp.py --print-mcp` as personal MCP (https://cursor.com/agents) **and** Team MCP (https://cursor.com/dashboard/integrations). Exact steps: `docs/CLOUD_ACCOUNT_MCP.md`.
+1. Paste `python3 scripts/cloud_hq_mcp.py --print-mcp` (now three servers: `jobhub`, `engram`, `tailscale-imac`) as personal MCP (https://cursor.com/agents) **and** Team MCP (https://cursor.com/dashboard/integrations). Exact steps: `docs/CLOUD_ACCOUNT_MCP.md`.
 2. Disable the marketplace Engram plugin on Cloud Agents (`command: engram` exits 127 on a VM that has not installed yet and leaves namespace `Engram` in `error`).
 3. Cursor **User** secrets `TS_API_KEY` / `TAILSCALE_AUTHKEY` when injected. If they are not, `cloud_tailscale_hydrate.sh` GETs private R2 `prompt-betting-engram/tailscale.env` with `CLOUDFLARE_API_TOKEN`. Do not ask Nicholas to re-paste a Tailscale key.
 4. Product-repo `"start": "bash scripts/cloud_agent_start.sh"` is still useful (Engram on PATH + `engram serve` + Tailscale userspace) but it is **per environment**. The dashboard MCP is what follows a brand-new repo.
