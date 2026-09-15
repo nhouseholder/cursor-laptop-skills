@@ -109,10 +109,17 @@ class CloudHqMcpTests(unittest.TestCase):
             mod = importlib.util.module_from_spec(spec)
             assert spec.loader is not None
             spec.loader.exec_module(mod)
-            with mock.patch.object(mod.subprocess, "check_call", side_effect=fake_call):
-                with mock.patch.object(mod.subprocess, "call", return_value=0):
-                    with mock.patch.object(mod, "_home", return_value=home):
-                        root = mod.clone_root()
+            # clone_root() runs in-process, so _git_env()/_token() read the real os.environ,
+            # not the local `env` dict above (that dict only matters when a subprocess is
+            # spawned). Put the token where _token() actually looks, and clear the alt name,
+            # so the GIT_CONFIG_* extraheader is built the same way the hosted runner builds it.
+            with mock.patch.dict(
+                os.environ, {"SPORT_REPO_TOKEN": "super-secret-pat", "GH_SPORT_TOKEN": ""}
+            ):
+                with mock.patch.object(mod.subprocess, "check_call", side_effect=fake_call):
+                    with mock.patch.object(mod.subprocess, "call", return_value=0):
+                        with mock.patch.object(mod, "_home", return_value=home):
+                            root = mod.clone_root()
             self.assertEqual(root, dest)
             self.assertEqual(seen["cmd"][:3], ["git", "clone", "--depth"])
             joined = " ".join(seen["cmd"])
@@ -140,8 +147,9 @@ class CloudHqMcpTests(unittest.TestCase):
         self.assertEqual(ts["args"][2], "tailscale")
         blob = json.dumps(data)
         self.assertEqual(list(engram["env"].keys()), ["ENGRAM_CLOUD_AUTOSYNC"])
-        self.assertNotIn("tskey-", blob)
-        self.assertNotIn("ENGRAM_CLOUD_TOKEN", blob)
+        self.assertNotIn("tskey-auth", blob)
+        self.assertNotIn("tskey-api", blob)
+        self.assertNotIn('"ENGRAM_CLOUD_TOKEN":', blob)
         self.assertNotIn("should-drop", blob)
 
     def test_python_c_payload_runs(self) -> None:
@@ -182,6 +190,82 @@ class CloudHqMcpTests(unittest.TestCase):
         self.assertIn("cursor.com/agents", docs)
         self.assertIn("Disable the marketplace Engram plugin on Cloud Agents", docs)
         self.assertIn("Do not point Engram at `engram-memory.com`", docs)
+
+    def test_uses_cwd_scripts_without_clone_or_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            home.mkdir()
+            work = Path(tmp) / "work"
+            _seed_plugin(work)
+            hook = Path(tmp) / "exec.txt"
+            env = _env_with_home(home)
+            env["CLOUD_HQ_MCP_EXEC"] = str(hook)
+            proc = subprocess.run(
+                ["python3", str(SCRIPTS / "cloud_hq_mcp.py"), "tailscale"],
+                env=env,
+                cwd=str(work),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            argv = hook.read_text().splitlines()
+            self.assertEqual(argv[0], "python3")
+            self.assertEqual(argv[1], str(work / "scripts" / "cloud_tailscale_mcp.py"))
+            self.assertNotIn("git clone", proc.stderr)
+
+    def test_print_mcp_payload_names_workspace_scripts(self) -> None:
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS / "cloud_hq_mcp.py"), "--print-mcp"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)["mcpServers"]["tailscale-imac"]["args"][1]
+        self.assertIn("/workspace/scripts", payload)
+        self.assertIn("cloud_tailscale_mcp.py", payload)
+
+    def test_launch_materializes_when_lookup_and_clone_fail(self) -> None:
+        import importlib.util
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            home.mkdir()
+            hook = Path(tmp) / "exec.txt"
+            spec = importlib.util.spec_from_file_location(
+                "cloud_hq_mcp", SCRIPTS / "cloud_hq_mcp.py"
+            )
+            mod = importlib.util.module_from_spec(spec)
+            assert spec.loader is not None
+            spec.loader.exec_module(mod)
+            with mock.patch.object(mod, "_home", return_value=home):
+                with mock.patch.object(mod, "_script", return_value=None):
+                    with mock.patch.object(mod, "clone_root", side_effect=RuntimeError("no net")):
+                        with mock.patch.dict(os.environ, {"CLOUD_HQ_MCP_EXEC": str(hook)}):
+                            rc = mod.launch("tailscale")
+            self.assertEqual(rc, 0)
+            dest = home / ".local" / "lib" / "engram" / "cloud_tailscale_mcp.py"
+            argv = hook.read_text().splitlines()
+            self.assertEqual(argv[0], "python3")
+            self.assertEqual(argv[1], str(dest))
+            self.assertTrue(dest.is_file())
+            self.assertIn("Discovery always succeeds", dest.read_text())
+            self.assertTrue((home / ".local" / "lib" / "engram" / "cloud_tailscale_up.sh").is_file())
+
+    def test_print_mcp_payload_embeds_tailscale_server(self) -> None:
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS / "cloud_hq_mcp.py"), "--print-mcp"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)["mcpServers"]["tailscale-imac"]["args"][1]
+        self.assertIn("EMBEDDED", payload)
+        self.assertIn("materialize", payload)
+        self.assertIn("Discovery always succeeds", payload)
+        self.assertIn("cloud_tailscale_up.sh", payload)
 
     def test_lib_engram_fallback_without_plugin_tree(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
