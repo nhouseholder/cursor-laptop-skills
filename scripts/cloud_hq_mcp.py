@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Account-wide Cloud HQ MCP launcher. stdout is MCP-only.
 
-Finds cursor-laptop-skills (plugin cache or ~/.local/share), clones it with
-SPORT_REPO_TOKEN extraheader if missing, then execs Engram or Tailscale MCP.
+Discovery never git-clones. The pasted python -c payload embeds the Engram
+wrapper and Tailscale MCP scripts and writes them to ~/.local/lib/engram
+when the plugin tree is missing, then execs them. Clone of
+cursor-laptop-skills is a last-resort, time-bounded fallback — a hang or 401
+there used to mark tailscale-imac error for the whole Cloud session.
+
 Never prints tokens. Never puts a token on argv.
 
   python3 cloud_hq_mcp.py engram
@@ -23,6 +27,16 @@ REPO = "https://github.com/nhouseholder/cursor-laptop-skills.git"
 SHARE_REL = ".local/share/cursor-laptop-skills"
 MARKER = "scripts/cloud_engram_mcp.sh"
 CLONE_LOG = "/tmp/cloud-hq-mcp-clone.log"
+CLONE_TIMEOUT_SEC = 12
+EMBEDDED_NAMES = (
+    "cloud_tailscale_mcp.py",
+    "cloud_tailscale_up.sh",
+    "cloud_tailscale_hydrate.sh",
+    "cloud_tailscale_mint_key.py",
+    "cloud_engram_mcp.sh",
+    "cloud_engram_hydrate.sh",
+    "cloud_install_engram.sh",
+)
 
 
 def _home() -> Path:
@@ -80,6 +94,9 @@ def _script(name: str) -> Path | None:
         candidates.append(root / "scripts" / name)
         candidates.append(root / name)
     candidates.append(_home() / ".local" / "lib" / "engram" / name)
+    # Cloud agent workspace: MCP discovery can run before start/install.
+    candidates.append(Path.cwd() / "scripts" / name)
+    candidates.append(Path("/workspace/scripts") / name)
     for path in candidates:
         if path.is_file():
             return path
@@ -99,6 +116,7 @@ def clone_root() -> Path:
             env=_git_env(),
             stdout=log,
             stderr=log,
+            timeout=CLONE_TIMEOUT_SEC,
         )
     subprocess.call(
         ["git", "-C", str(dest), "remote", "set-url", "origin", REPO],
@@ -106,8 +124,33 @@ def clone_root() -> Path:
         stderr=subprocess.DEVNULL,
     )
     if not _ok(dest):
-        print("cloud_hq_mcp: clone missing Engram wrapper", file=sys.stderr)
-        raise SystemExit(1)
+        raise RuntimeError("clone missing Engram wrapper")
+    return dest
+
+
+def embedded_files() -> dict:
+    baked = globals().get("EMBEDDED")
+    if isinstance(baked, dict) and baked:
+        return baked
+    here = Path(__file__).resolve().parent if "__file__" in globals() else None
+    out: dict = {}
+    if here is None or not here.is_dir():
+        return out
+    for name in EMBEDDED_NAMES:
+        path = here / name
+        if path.is_file():
+            out[name] = path.read_text(encoding="utf-8")
+    return out
+
+
+def materialize(name: str) -> Path | None:
+    text = embedded_files().get(name)
+    if not text:
+        return None
+    dest = _home() / ".local" / "lib" / "engram" / name
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    dest.chmod(0o755)
     return dest
 
 
@@ -121,10 +164,33 @@ def _exec(argv: list[str]) -> None:
 
 def launch(mode: str) -> int:
     name = "cloud_tailscale_mcp.py" if mode == "tailscale" else "cloud_engram_mcp.sh"
+    extras = (
+        (
+            "cloud_tailscale_up.sh",
+            "cloud_tailscale_hydrate.sh",
+            "cloud_tailscale_mint_key.py",
+        )
+        if mode == "tailscale"
+        else (
+            "cloud_engram_hydrate.sh",
+            "cloud_install_engram.sh",
+        )
+    )
     path = _script(name)
     if path is None:
-        root = clone_root()
-        path = root / "scripts" / name
+        path = materialize(name)
+        for extra in extras:
+            materialize(extra)
+    if path is None:
+        try:
+            root = clone_root()
+            path = root / "scripts" / name
+        except Exception as exc:
+            print(f"cloud_hq_mcp: clone skipped ({type(exc).__name__})", file=sys.stderr)
+            path = None
+    if path is None or not Path(path).is_file():
+        print("cloud_hq_mcp: no server script after materialize", file=sys.stderr)
+        return 1
     if mode == "tailscale":
         _exec(["python3", str(path)])
         return 0
@@ -138,12 +204,15 @@ def python_c_source() -> str:
 
     header = (
         "from __future__ import annotations\n"
-        "import base64, os, shutil, subprocess, sys\n"
+        "import base64, json, os, shutil, subprocess, sys\n"
         "from pathlib import Path\n"
         f"REPO = {REPO!r}\n"
         f"SHARE_REL = {SHARE_REL!r}\n"
         f"MARKER = {MARKER!r}\n"
         f"CLONE_LOG = {CLONE_LOG!r}\n"
+        f"CLONE_TIMEOUT_SEC = {CLONE_TIMEOUT_SEC!r}\n"
+        f"EMBEDDED_NAMES = {EMBEDDED_NAMES!r}\n"
+        f"EMBEDDED = json.loads({json.dumps(embedded_files())!r})\n"
     )
     body = "\n".join(
         inspect.getsource(fn)
@@ -155,6 +224,8 @@ def python_c_source() -> str:
             find_root,
             _script,
             clone_root,
+            embedded_files,
+            materialize,
             _exec,
             launch,
         )
@@ -176,19 +247,9 @@ def mcp_server(mode: str) -> dict:
     return block
 
 
-JOBHUB_MCP_URL = "https://jobhub-cloud-mcp.nikhouseholdr.workers.dev/mcp"
-
-
 def account_mcp_document() -> dict:
-    """Every server a Cloud Agent needs, in dashboard paste form.
-
-    jobhub is a plain HTTP server: the Cloudflare Worker injects the iMac token from KV,
-    so the client config carries no secret and needs no Tailscale. engram and
-    tailscale-imac are stdio launchers that self-heal on a fresh VM.
-    """
     return {
         "mcpServers": {
-            "jobhub": {"url": JOBHUB_MCP_URL},
             "engram": mcp_server("engram"),
             "tailscale-imac": mcp_server("tailscale"),
         }
