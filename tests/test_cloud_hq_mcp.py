@@ -288,6 +288,67 @@ class CloudHqMcpTests(unittest.TestCase):
             argv = hook.read_text().splitlines()
             self.assertEqual(argv[1], str(lib / "cloud_engram_mcp.sh"))
 
+    def test_find_root_prefers_newest_cached_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            base = home / ".cursor" / "plugins" / "cache" / "cursor-laptop-skills"
+            old, new = base / "aaa-old", base / "zzz-new"
+            _seed_plugin(old)
+            _seed_plugin(new)
+            (base / "aaa-old.installed").write_text("")
+            os.utime(old / "scripts" / "cloud_engram_mcp.sh", (1, 1))
+            hook = Path(tmp) / "exec.txt"
+            env = _env_with_home(home)
+            env["CLOUD_HQ_MCP_EXEC"] = str(hook)
+            os.utime(new / "scripts" / "cloud_engram_mcp.sh", None)
+            proc = subprocess.run(
+                ["python3", str(SCRIPTS / "cloud_hq_mcp.py"), "engram"],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(hook.read_text().splitlines()[1], str(new / "scripts" / "cloud_engram_mcp.sh"))
+
+    def test_plant_fills_lib_and_git_excluded_workspace_shims(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            work = Path(tmp) / "workspace"
+            (work / ".git" / "info").mkdir(parents=True)
+            (work / "scripts").mkdir()
+            (work / "scripts" / "cloud_engram_mcp.sh").write_text("# real file, keep\n")
+            env = _env_with_home(home)
+            for _ in range(2):
+                proc = subprocess.run(
+                    ["python3", "-c",
+                     "import importlib.util,sys,pathlib;"
+                     f"s=importlib.util.spec_from_file_location('m',{str(SCRIPTS / 'cloud_hq_mcp.py')!r});"
+                     "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
+                     f"m.plant(pathlib.Path({str(work)!r}))"],
+                    env=env, capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+            lib = home / ".local" / "lib" / "engram"
+            for name in ("cloud_tailscale_mcp.py", "cloud_tailscale_up.sh", "cloud_engram_mcp.sh", "cloud_hq_mcp.py"):
+                self.assertTrue((lib / name).is_file(), name)
+            shim = work / "scripts" / "cloud_tailscale_mcp.py"
+            self.assertTrue(shim.is_symlink())
+            self.assertEqual(shim.resolve(), (lib / "cloud_tailscale_mcp.py").resolve())
+            self.assertEqual((work / "scripts" / "cloud_engram_mcp.sh").read_text(), "# real file, keep\n")
+            exclude = (work / ".git" / "info" / "exclude").read_text().splitlines()
+            self.assertEqual(exclude.count("scripts/cloud_tailscale_mcp.py"), 1)
+            self.assertNotIn("scripts/cloud_engram_mcp.sh", exclude)
+
+    def test_checked_in_cursor_mcp_matches_print_mcp(self) -> None:
+        """Regenerate with: python3 scripts/cloud_hq_mcp.py --write-mcp .cursor/mcp.json"""
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS / "cloud_hq_mcp.py"), "--print-mcp"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(
+            json.loads((ROOT / ".cursor" / "mcp.json").read_text()),
+            json.loads(proc.stdout),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

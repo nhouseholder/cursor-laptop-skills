@@ -5,7 +5,7 @@ description: "ALWAYS ACTIVE on Cloud Agents. Save decisions, conventions, and fi
 
 # Engram save (Cloud Agents)
 
-Use the **Engram** Cursor plugin already on the agent. Do not add another memory MCP.
+Use the **Engram** MCP already on the agent (on Cloud: the account launcher from `cloud_hq_mcp.py --print-mcp`, not the marketplace plugin). Do not add another memory MCP.
 
 Tools: `mem_save`, `mem_search`, `mem_context`, `mem_session_summary` (namespace `Engram`).
 

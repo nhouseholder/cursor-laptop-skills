@@ -211,7 +211,7 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(engram["args"][0], "-c")
             self.assertEqual(engram["args"][2], "engram")
             self.assertEqual(engram["env"]["ENGRAM_CLOUD_AUTOSYNC"], "1")
-            self.assertNotIn("ENGRAM_CLOUD_TOKEN", json.dumps(data))
+            self.assertEqual(set(engram["env"]), {"ENGRAM_CLOUD_AUTOSYNC"})
             self.assertNotIn("should-drop", json.dumps(data))
             ts = data["mcpServers"]["tailscale-imac"]
             self.assertEqual(ts["command"], "python3")
