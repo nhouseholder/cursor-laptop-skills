@@ -48,7 +48,7 @@ First hit wins; the plugin cache entry is the newest by mtime:
 3. Add server `tailscale-imac` the same way (no token env).
 4. Replace any older paste of these two servers. Pastes from before the embedded launcher (they contain `git clone` and no `EMBEDDED`) can hang on clone.
 5. Enable both for Cloud Agents. Link Team MCP to the Default team marketplace so IDE/CLI can install the same servers.
-6. **Do not use the marketplace Engram plugin on Cloud Agents.** It can conflict with this launcher: that plugin is `command: engram`, which exits 127 on a VM that has not run install yet and occupies namespace `Engram` in `error`. This launcher is the Cloud Engram server. Keep marketplace Engram, if at all, for the laptop IDE.
+6. **Disable the marketplace Engram plugin on Cloud Agents.** It can conflict with this launcher: that plugin is `command: engram`, which exits 127 on a VM that has not run install yet and occupies namespace `Engram` in `error`. This launcher is the Cloud Engram server. Keep marketplace Engram, if at all, for the laptop IDE.
 7. Keep User secrets: `TS_API_KEY` (required for iMac SSH), optional `TAILSCALE_AUTHKEY` / `TS_OAUTH_CLIENT_SECRET`. When not injected, `cloud_tailscale_hydrate.sh` reads private R2.
 
 A **new** Cloud Agent is required after saving MCP. This running session cannot rediscover a stdio server that already failed.

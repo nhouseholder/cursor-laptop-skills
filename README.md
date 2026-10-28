@@ -66,7 +66,7 @@ Model-invocable by description (also have a `/` command): `tdd`, `diagnosing-bug
 Cursor Cloud does **not** run this plugin's `mcp.json` (Cloud enables the plugin as skills/commands only) and does **not** read a repo `.cursor/mcp.json`. MCP for Cloud Agents is **account/team dashboard**:
 
 1. Paste the output of `python3 scripts/cloud_hq_mcp.py --print-mcp` (two servers: `engram`, `tailscale-imac`) as personal MCP (https://cursor.com/agents) **and** Team MCP (https://cursor.com/dashboard/integrations). This is the **only** recommended Cloud registration for Grok Bot and every other host too. Exact steps: `docs/CLOUD_ACCOUNT_MCP.md`. Re-paste after every release that changes `scripts/`: the JSON embeds them.
-2. Do not use the marketplace Engram plugin on Cloud Agents. It can conflict with the launcher: `command: engram` exits 127 on a VM that has not installed yet and leaves namespace `Engram` in `error`. The launcher is the Cloud Engram server.
+2. Disable the marketplace Engram plugin on Cloud Agents. It can conflict with the launcher: `command: engram` exits 127 on a VM that has not installed yet and leaves namespace `Engram` in `error`. The launcher is the Cloud Engram server.
 3. Cursor **User** secrets `TS_API_KEY` / `TAILSCALE_AUTHKEY` when injected. If they are not, `cloud_tailscale_hydrate.sh` GETs private R2 `prompt-betting-engram/tailscale.env` with `CLOUDFLARE_API_TOKEN`. Do not ask Nicholas to re-paste a Tailscale key.
 4. Product-repo `"start": "bash scripts/cloud_agent_start.sh"` is still useful (Engram on PATH + `engram serve` + Tailscale userspace) but it is **per environment**. The dashboard MCP is what follows a brand-new repo.
 
