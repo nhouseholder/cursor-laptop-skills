@@ -185,39 +185,37 @@ def handle_request(msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _read_stdio_message() -> Optional[Dict[str, Any]]:
-    header = b""
-    while b"\r\n\r\n" not in header and b"\n\n" not in header:
-        chunk = sys.stdin.buffer.read(1)
-        if not chunk:
+def _read_stdio_message() -> Optional[Tuple[Dict[str, Any], str]]:
+    """Return (message, framing). MCP stdio is newline-delimited JSON; some hosts
+    use LSP-style Content-Length frames. Reply in whichever the host sent."""
+    stdin = sys.stdin.buffer
+    while True:
+        line = stdin.readline()
+        if not line:
             return None
-        header += chunk
-        if len(header) > 65536:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(b"{"):
+            return json.loads(stripped.decode("utf-8")), "line"
+        length = 0
+        while stripped:
+            if stripped.lower().startswith(b"content-length:"):
+                length = int(stripped.split(b":", 1)[1].strip())
+            stripped = (stdin.readline() or b"").strip()
+        body = stdin.read(length) if length else b""
+        if not body:
             return None
-        if header.startswith(b"{") and header.endswith(b"\n") and b"Content-Length:" not in header and b"content-length:" not in header:
-            line = header.strip()
-            if line:
-                return json.loads(line.decode("utf-8"))
-    if b"\r\n\r\n" in header:
-        raw_headers, rest = header.split(b"\r\n\r\n", 1)
-    else:
-        raw_headers, rest = header.split(b"\n\n", 1)
-    length = 0
-    for line in raw_headers.decode("utf-8", "replace").splitlines():
-        if line.lower().startswith("content-length:"):
-            length = int(line.split(":", 1)[1].strip())
-    body = rest
-    while len(body) < length:
-        more = sys.stdin.buffer.read(length - len(body))
-        if not more:
-            break
-        body += more
-    return json.loads(body.decode("utf-8"))
+        return json.loads(body.decode("utf-8")), "frame"
 
 
-def _write_stdio_message(msg: Dict[str, Any]) -> None:
+def _write_stdio_message(msg: Dict[str, Any], framing: str = "line") -> None:
     body = json.dumps(msg, separators=(",", ":")).encode("utf-8")
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body)
+    if framing == "frame":
+        body = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+    else:
+        body += b"\n"
+    sys.stdout.buffer.write(body)
     sys.stdout.buffer.flush()
 
 
@@ -225,17 +223,17 @@ def main() -> int:
     while True:
         try:
             incoming = _read_stdio_message()
-        except json.JSONDecodeError as exc:
-            print(f"[tailscale-imac] bad json: {exc}", file=sys.stderr)
+        except (json.JSONDecodeError, ValueError) as exc:
+            print(f"[tailscale-imac] bad message: {exc}", file=sys.stderr)
             continue
         if incoming is None:
             return 0
-        if not isinstance(incoming, dict):
+        message, framing = incoming
+        if not isinstance(message, dict):
             continue
-        reply = handle_request(incoming)
+        reply = handle_request(message)
         if reply is not None:
-            _write_stdio_message(reply)
-    return 0
+            _write_stdio_message(reply, framing)
 
 
 if __name__ == "__main__":

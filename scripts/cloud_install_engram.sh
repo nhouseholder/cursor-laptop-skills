@@ -117,6 +117,9 @@ fi
 if [[ -f "${SCRIPT_DIR}/cloud_tailscale_up.sh" ]]; then
   install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_up.sh" "${LIB_DEST}/cloud_tailscale_up.sh"
 fi
+if [[ -f "${SCRIPT_DIR}/cloud_github_git_env.py" ]]; then
+  install -m 0755 "${SCRIPT_DIR}/cloud_github_git_env.py" "${LIB_DEST}/cloud_github_git_env.py"
+fi
 if [[ -f "${SCRIPT_DIR}/cloud_tailscale_mint_key.py" ]]; then
   install -m 0755 "${SCRIPT_DIR}/cloud_tailscale_mint_key.py" "${LIB_DEST}/cloud_tailscale_mint_key.py"
 fi

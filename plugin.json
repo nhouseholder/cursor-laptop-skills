@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cursor-laptop-skills",
-  "description": "Account-wide Cloud slash commands plus Engram Cloud MCP and Tailscale iMac MCP that self-heal on every Cloud Agent.",
-  "version": "1.7.0",
+  "description": "Account-wide Cloud skills and slash commands (incl. ponytail, i-have-adhd, grill-me, tdd, diagnosing-bugs) plus self-healing Engram and Tailscale iMac MCP launchers.",
+  "version": "1.8.0",
   "author": {
     "name": "Nicholas Householder"
   },

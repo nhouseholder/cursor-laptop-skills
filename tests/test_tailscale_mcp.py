@@ -80,6 +80,28 @@ class TailscaleMcpTests(unittest.TestCase):
         names = {t["name"] for t in msgs[1]["result"]["tools"]}
         self.assertEqual(names, {"tailscale_status", "tailscale_up", "imac_exec", "jobhub"})
 
+    def test_newline_delimited_host_gets_newline_delimited_replies(self) -> None:
+        """MCP stdio hosts send one JSON object per line and wait for the same back."""
+        lines = b"".join(
+            json.dumps(m).encode() + b"\n"
+            for m in (
+                {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+            )
+        )
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS / "cloud_tailscale_mcp.py")],
+            input=lines,
+            capture_output=True,
+            timeout=8,
+            check=False,
+        )
+        self.assertNotIn(b"Content-Length", proc.stdout)
+        replies = [json.loads(line) for line in proc.stdout.splitlines()]
+        self.assertEqual([r["id"] for r in replies], [1, 2])
+        self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "tailscale-imac")
+
     def test_status_tool_uses_injected_script_and_redacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fake = Path(tmp) / "cloud_tailscale_up.sh"

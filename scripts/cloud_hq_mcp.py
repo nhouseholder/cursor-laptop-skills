@@ -12,6 +12,7 @@ Never prints tokens. Never puts a token on argv.
   python3 cloud_hq_mcp.py engram
   python3 cloud_hq_mcp.py tailscale
   python3 cloud_hq_mcp.py --print-mcp
+  python3 cloud_hq_mcp.py --plant     # copy scripts to ~/.local/lib/engram + legacy /workspace/scripts shims
 """
 from __future__ import annotations
 
@@ -33,6 +34,7 @@ EMBEDDED_NAMES = (
     "cloud_tailscale_up.sh",
     "cloud_tailscale_hydrate.sh",
     "cloud_tailscale_mint_key.py",
+    "cloud_github_git_env.py",
     "cloud_engram_mcp.sh",
     "cloud_engram_hydrate.sh",
     "cloud_install_engram.sh",
@@ -77,13 +79,15 @@ def find_root() -> Path | None:
         return share
     cache = home / ".cursor" / "plugins" / "cache"
     if cache.is_dir():
-        for match in sorted(cache.glob("*cursor-laptop-skills*")):
+        hits = []
+        for match in cache.glob("*cursor-laptop-skills*"):
             if _ok(match):
-                return match
-            if not match.is_dir():
-                continue
-            for hit in sorted(match.rglob("cloud_engram_mcp.sh")):
-                return hit.parent.parent
+                hits.append(match / MARKER)
+            elif match.is_dir():
+                hits.extend(match.rglob("cloud_engram_mcp.sh"))
+        if hits:
+            newest = max(hits, key=lambda hit: hit.stat().st_mtime)
+            return newest.parent.parent
     return None
 
 
@@ -169,6 +173,7 @@ def launch(mode: str) -> int:
             "cloud_tailscale_up.sh",
             "cloud_tailscale_hydrate.sh",
             "cloud_tailscale_mint_key.py",
+            "cloud_github_git_env.py",
         )
         if mode == "tailscale"
         else (
@@ -197,6 +202,54 @@ def launch(mode: str) -> int:
     os.environ["ENGRAM_CLOUD_AUTOSYNC"] = os.environ.get("ENGRAM_CLOUD_AUTOSYNC") or "1"
     _exec(["bash", str(path), "mcp", "--tools=agent"])
     return 0
+
+
+LEGACY_SHIMS = ("cloud_tailscale_mcp.py", "cloud_engram_mcp.sh")
+
+
+def plant(workspace: Path | None = None) -> list[str]:
+    """Copy every HQ script into ~/.local/lib/engram and, for hosts that hard-code
+    /workspace/scripts/<name>, symlink the two MCP entrypoints there (git-excluded).
+    Never overwrites a real file in the workspace. Not part of the pasted payload."""
+    lib = _home() / ".local" / "lib" / "engram"
+    lib.mkdir(parents=True, exist_ok=True)
+    root = find_root()
+    planted: list[str] = []
+    for name in EMBEDDED_NAMES + ("cloud_hq_mcp.py",):
+        src = (root / "scripts" / name) if root is not None else None
+        text = None
+        if src is not None and src.is_file():
+            text = src.read_text(encoding="utf-8")
+        elif name == "cloud_hq_mcp.py" and "__file__" in globals():
+            text = Path(__file__).read_text(encoding="utf-8")
+        else:
+            text = embedded_files().get(name)
+        if not text:
+            continue
+        dest = lib / name
+        if not dest.is_file() or dest.read_text(encoding="utf-8") != text:
+            dest.write_text(text, encoding="utf-8")
+        dest.chmod(0o755)
+        planted.append(str(dest))
+    work = workspace if workspace is not None else Path("/workspace")
+    scripts = work / "scripts"
+    if work.is_dir() and os.access(work, os.W_OK):
+        for name in LEGACY_SHIMS:
+            target = lib / name
+            link = scripts / name
+            if not target.is_file() or link.exists() or link.is_symlink():
+                continue
+            scripts.mkdir(exist_ok=True)
+            link.symlink_to(target)
+            planted.append(str(link))
+            exclude = work / ".git" / "info" / "exclude"
+            if exclude.parent.is_dir():
+                entry = f"scripts/{name}"
+                known = exclude.read_text().splitlines() if exclude.is_file() else []
+                if entry not in known:
+                    with open(exclude, "a") as fh:
+                        fh.write(entry + "\n")
+    return planted
 
 
 def python_c_source() -> str:
@@ -260,6 +313,10 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "--print-mcp":
         sys.stdout.write(json.dumps(account_mcp_document(), indent=2) + "\n")
+        return 0
+    if args and args[0] == "--plant":
+        for path in plant():
+            print(path, file=sys.stderr)
         return 0
     if args and args[0] == "--write-mcp":
         dest = Path(args[1] if len(args) > 1 else "-")

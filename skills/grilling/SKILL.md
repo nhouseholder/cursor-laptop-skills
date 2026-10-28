@@ -1,9 +1,6 @@
 ---
 name: grilling
 description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
-category: "productivity"
-source_repo: "mattpocock/skills"
-date_added: "2026-07-09"
 disable-model-invocation: true
 ---
 
@@ -24,6 +21,8 @@ Format a round like so:
 
 ➡️ <your recommended answer>
 ```
+
+Word each question so "yes" accepts your recommended answer.
 
 Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 

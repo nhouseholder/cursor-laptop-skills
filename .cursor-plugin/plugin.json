@@ -1,8 +1,8 @@
 {
   "name": "cursor-laptop-skills",
   "displayName": "Laptop skills (Cloud)",
-  "version": "1.7.0",
-  "description": "Slash commands for every Cloud Agent plus account-wide Engram Cloud MCP (autosync) and Tailscale iMac MCP that self-heal on Cloud.",
+  "version": "1.8.0",
+  "description": "Skills and slash commands for every Cloud Agent (incl. folded-in ponytail, i-have-adhd, Matt Pocock set) plus self-healing Engram and Tailscale iMac MCP launchers for Cloud.",
   "author": {
     "name": "Nicholas Householder"
   },
@@ -15,7 +15,10 @@
     "wrap-up",
     "refactor",
     "performance",
-    "engram"
+    "engram",
+    "ponytail",
+    "grill-me",
+    "tdd"
   ],
   "skills": "./skills",
   "commands": "./commands",
